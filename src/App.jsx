@@ -54,6 +54,7 @@ export default function VideoPoker() {
   const [drawPhase, setDrawPhase] = useState(false);
   const [globalScores, setGlobalScores] = useState([]);
   const [message, setMessage] = useState("");
+  const [revealedCards, setRevealedCards] = useState([true, true, true, true, true]);
 
   useEffect(() => {
     const savedName = Cookies.get("vpPlayer");
@@ -90,6 +91,7 @@ export default function VideoPoker() {
     setHand([]);
     setDeck([]);
     setIsHolding([false, false, false, false, false]);
+    setRevealedCards([true, true, true, true, true]);
     setDrawPhase(false);
     setMessage("");
   }
@@ -104,6 +106,7 @@ export default function VideoPoker() {
     setDeck(newDeck.slice(5));
     setHand(newHand);
     setIsHolding([false, false, false, false, false]);
+    setRevealedCards([true, true, true, true, true]);
     setDrawPhase(true);
     setTokens(tokens - 1);
     setMessage("Click cards to hold, then click Draw.");
@@ -115,16 +118,37 @@ export default function VideoPoker() {
     );
     setHand(newHand);
     setDeck([...deck]);
+    setIsHolding([false, false, false, false, false]);
+    setRevealedCards([false, false, false, false, false]);
+    setMessage("");
+
+        let revealState = [false, false, false, false, false];
+    isHolding.forEach((held, i) => {
+      if (held) revealState[i] = true;
+    });
+    setRevealedCards(revealState);
+
+    for (let i = 0; i < 5; i++) {
+      if (!isHolding[i]) {
+        await new Promise((res) => setTimeout(res, 200 + i * 150));
+        setRevealedCards((prev) => {
+          const updated = [...prev];
+          updated[i] = true;
+          return updated;
+        });
+      }
+    }
+
+
     const result = evaluateHand(newHand);
     const payout = result.multiplier;
-    setTokens(tokens + payout);
+    setTokens((prev) => prev + payout);
     setMessage(
       payout > 0
         ? `${result.name} – You win ${payout} token${payout > 1 ? "s" : ""}!`
         : "No win – Better luck next time!"
     );
     setDrawPhase(false);
-    setIsHolding([false, false, false, false, false]);
 
     try {
       await submitScore(db, "vp_leaderboard", name, payout > 0 ? 1 : 0, payout === 0 ? 1 : 0, 0);
@@ -217,13 +241,15 @@ export default function VideoPoker() {
                 <div
                   key={idx}
                   onClick={() => toggleHold(idx)}
-                  className={`p-4 bg-white text-black rounded text-xl flex flex-col items-center cursor-pointer transition duration-150 ease-in-out ${
+                  className={`p-4 bg-white text-black rounded text-xl flex flex-col items-center cursor-pointer transition duration-300 ease-in-out transform ${
                     isHolding[idx] ? "ring-4 ring-yellow-400 shadow-md" : ""
-                  }`}
+                  } ${revealedCards[idx] ? "rotate-0 opacity-100" : "rotate-y-180 opacity-0"}`}
                 >
-                  <span className={["♥", "♦"].includes(card.suit) ? "text-red-600" : ""}>
-                    {getCardString(card)}
-                  </span>
+                  {revealedCards[idx] && (
+                    <span className={["♥", "♦"].includes(card.suit) ? "text-red-600" : ""}>
+                      {getCardString(card)}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
