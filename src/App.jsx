@@ -142,7 +142,7 @@ export default function VideoPoker() {
 
     const result = evaluateHand(newHand);
     const payout = result.multiplier;
-    setTokens((prev) => prev + payout);
+    setTokens((prev) => prev + payout + 1);
     setMessage(
       payout > 0
         ? `${result.name} – You win ${payout} token${payout > 1 ? "s" : ""}!`
@@ -177,7 +177,7 @@ export default function VideoPoker() {
 
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center flex-col p-4">
-      <h1 className="text-4xl font-bold mb-4">🂡  Video Poker</h1>
+      <h1 className="text-4xl font-bold mb-4">🂡 Video Poker</h1>
 
       {!name ? (
         <div className="flex flex-col items-center">
