@@ -1,12 +1,23 @@
 import { useState, useEffect } from "react";
 import Cookies from "js-cookie";
-import { db, fetchLeaderboard, submitScore, getTokenBalance, setTokenBalance } from "./firebase";
+import {
+  db,
+  fetchLeaderboard,
+  submitScore,
+  getTokenBalance,
+  setTokenBalance,
+} from "./firebase";
 
 const suits = ["♠", "♥", "♦", "♣"];
-const ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+const ranks = [
+  "2", "3", "4", "5", "6", "7", "8", "9", "10",
+  "J", "Q", "K", "A",
+];
 
 function createDeck() {
-  return suits.flatMap(suit => ranks.map(rank => ({ rank, suit })));
+  return suits.flatMap((suit) =>
+    ranks.map((rank) => ({ rank, suit }))
+  );
 }
 
 function shuffleDeck(deck) {
@@ -20,26 +31,46 @@ function shuffleDeck(deck) {
 function evaluateHand(hand) {
   const rankCounts = {};
   const suitCounts = {};
-  const rankValues = hand.map(card => ranks.indexOf(card.rank));
-  hand.forEach(card => {
+  const rankValues = hand.map((card) => ranks.indexOf(card.rank));
+  hand.forEach((card) => {
     rankCounts[card.rank] = (rankCounts[card.rank] || 0) + 1;
     suitCounts[card.suit] = (suitCounts[card.suit] || 0) + 1;
   });
   const isFlush = Object.keys(suitCounts).length === 1;
   const sortedRanks = [...new Set(rankValues)].sort((a, b) => a - b);
-  const isStraight = sortedRanks.length === 5 && (sortedRanks[4] - sortedRanks[0] === 4 || JSON.stringify(sortedRanks) === JSON.stringify([0,1,2,3,12]));
+  const isStraight =
+    sortedRanks.length === 5 &&
+    (sortedRanks[4] - sortedRanks[0] === 4 ||
+      JSON.stringify(sortedRanks) === JSON.stringify([0, 1, 2, 3, 12]));
   const values = Object.values(rankCounts).sort((a, b) => b - a);
-  const hasJacksOrBetter = Object.keys(rankCounts).some(rank => rankCounts[rank] === 2 && ["J", "Q", "K", "A"].includes(rank));
+  const hasJacksOrBetter = Object.keys(rankCounts).some(
+    (rank) =>
+      rankCounts[rank] === 2 && ["J", "Q", "K", "A"].includes(rank)
+  );
 
-  if (isFlush && isStraight && rankValues.includes(8) && rankValues.includes(9) && rankValues.includes(10) && rankValues.includes(11) && rankValues.includes(12)) return { name: "Royal Flush", multiplier: 250 };
-  if (isFlush && isStraight) return { name: "Straight Flush", multiplier: 50 };
+  if (
+    isFlush &&
+    isStraight &&
+    rankValues.includes(8) &&
+    rankValues.includes(9) &&
+    rankValues.includes(10) &&
+    rankValues.includes(11) &&
+    rankValues.includes(12)
+  )
+    return { name: "Royal Flush", multiplier: 250 };
+  if (isFlush && isStraight)
+    return { name: "Straight Flush", multiplier: 50 };
   if (values[0] === 4) return { name: "Four of a Kind", multiplier: 25 };
-  if (values[0] === 3 && values[1] === 2) return { name: "Full House", multiplier: 9 };
+  if (values[0] === 3 && values[1] === 2)
+    return { name: "Full House", multiplier: 9 };
   if (isFlush) return { name: "Flush", multiplier: 6 };
   if (isStraight) return { name: "Straight", multiplier: 4 };
-  if (values[0] === 3) return { name: "Three of a Kind", multiplier: 3 };
-  if (values[0] === 2 && values[1] === 2) return { name: "Two Pair", multiplier: 2 };
-  if (hasJacksOrBetter) return { name: "Jacks or Better", multiplier: 1 };
+  if (values[0] === 3)
+    return { name: "Three of a Kind", multiplier: 3 };
+  if (values[0] === 2 && values[1] === 2)
+    return { name: "Two Pair", multiplier: 2 };
+  if (hasJacksOrBetter)
+    return { name: "Jacks or Better", multiplier: 1 };
   return { name: "No Win", multiplier: 0 };
 }
 
@@ -50,11 +81,15 @@ export default function VideoPoker() {
   const [tokensLoaded, setTokensLoaded] = useState(false);
   const [hand, setHand] = useState([]);
   const [deck, setDeck] = useState([]);
-  const [isHolding, setIsHolding] = useState([false, false, false, false, false]);
+  const [isHolding, setIsHolding] = useState([
+    false, false, false, false, false,
+  ]);
   const [drawPhase, setDrawPhase] = useState(false);
   const [globalScores, setGlobalScores] = useState([]);
   const [message, setMessage] = useState("");
-  const [revealedCards, setRevealedCards] = useState([true, true, true, true, true]);
+  const [revealedCards, setRevealedCards] = useState([
+    true, true, true, true, true,
+  ]);
 
   useEffect(() => {
     const savedName = Cookies.get("vpPlayer");
@@ -101,15 +136,27 @@ export default function VideoPoker() {
       setMessage("You're out of tokens. Request 10 more to keep playing.");
       return;
     }
+
     const newDeck = shuffleDeck(createDeck());
     const newHand = newDeck.slice(0, 5);
     setDeck(newDeck.slice(5));
     setHand(newHand);
     setIsHolding([false, false, false, false, false]);
-    setRevealedCards([true, true, true, true, true]);
     setDrawPhase(true);
     setTokens(tokens - 1);
     setMessage("Click cards to hold, then click Draw.");
+
+    // Animate reveal
+    setRevealedCards([false, false, false, false, false]);
+    newHand.forEach((_, i) => {
+      setTimeout(() => {
+        setRevealedCards((prev) => {
+          const updated = [...prev];
+          updated[i] = true;
+          return updated;
+        });
+      }, 200 + i * 150);
+    });
   }
 
   async function handleDraw() {
@@ -122,7 +169,7 @@ export default function VideoPoker() {
     setRevealedCards([false, false, false, false, false]);
     setMessage("");
 
-        let revealState = [false, false, false, false, false];
+    let revealState = [false, false, false, false, false];
     isHolding.forEach((held, i) => {
       if (held) revealState[i] = true;
     });
@@ -130,7 +177,9 @@ export default function VideoPoker() {
 
     for (let i = 0; i < 5; i++) {
       if (!isHolding[i]) {
-        await new Promise((res) => setTimeout(res, 200 + i * 150));
+        await new Promise((res) =>
+          setTimeout(res, 200 + i * 150)
+        );
         setRevealedCards((prev) => {
           const updated = [...prev];
           updated[i] = true;
@@ -139,19 +188,27 @@ export default function VideoPoker() {
       }
     }
 
-
     const result = evaluateHand(newHand);
     const payout = result.multiplier;
     setTokens((prev) => prev + (payout > 0 ? payout + 1 : 0));
     setMessage(
       payout > 0
-        ? `${result.name} – You win ${payout} token${payout > 1 ? "s" : ""}!`
+        ? `${result.name} – You win ${payout} token${
+            payout > 1 ? "s" : ""
+          }!`
         : "No win – Better luck next time!"
     );
     setDrawPhase(false);
 
     try {
-      await submitScore(db, "vp_leaderboard", name, payout > 0 ? 1 : 0, payout === 0 ? 1 : 0, 0);
+      await submitScore(
+        db,
+        "vp_leaderboard",
+        name,
+        payout > 0 ? 1 : 0,
+        payout === 0 ? 1 : 0,
+        0
+      );
       const scores = await fetchLeaderboard(db, "vp_leaderboard");
       setGlobalScores(scores);
     } catch (err) {
@@ -242,11 +299,23 @@ export default function VideoPoker() {
                   key={idx}
                   onClick={() => toggleHold(idx)}
                   className={`p-4 bg-white text-black rounded text-xl flex flex-col items-center cursor-pointer transition duration-300 ease-in-out transform ${
-                    isHolding[idx] ? "ring-4 ring-yellow-400 shadow-md" : ""
-                  } ${revealedCards[idx] ? "rotate-0 opacity-100" : "rotate-y-180 opacity-0"}`}
+                    isHolding[idx]
+                      ? "ring-4 ring-yellow-400 shadow-md"
+                      : ""
+                  } ${
+                    revealedCards[idx]
+                      ? "rotate-0 opacity-100"
+                      : "rotate-y-180 opacity-0"
+                  }`}
                 >
                   {revealedCards[idx] && (
-                    <span className={["♥", "♦"].includes(card.suit) ? "text-red-600" : ""}>
+                    <span
+                      className={
+                        ["♥", "♦"].includes(card.suit)
+                          ? "text-red-600"
+                          : ""
+                      }
+                    >
                       {getCardString(card)}
                     </span>
                   )}
@@ -255,13 +324,18 @@ export default function VideoPoker() {
             </div>
           )}
 
-          {message && <div className="mt-2 text-yellow-400">{message}</div>}
+          {message && (
+            <div className="mt-2 text-yellow-400">{message}</div>
+          )}
 
-          <h2 className="mt-6 text-2xl font-bold">Global Leaderboard</h2>
+          <h2 className="mt-6 text-2xl font-bold">
+            Global Leaderboard
+          </h2>
           <ul className="mt-2">
             {globalScores.map((entry, index) => (
               <li key={index}>
-                {entry.name}: {entry.wins}W / {entry.losses}L / {entry.ties}T
+                {entry.name}: {entry.wins}W / {entry.losses}L /{" "}
+                {entry.ties}T
               </li>
             ))}
           </ul>
