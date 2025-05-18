@@ -2,3 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ensure full-screen layout works on iOS */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background-color: black;
+}
+
+#root {
+  height: 100%;
+}
+
